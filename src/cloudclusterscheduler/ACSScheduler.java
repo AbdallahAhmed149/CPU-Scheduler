@@ -1,11 +1,11 @@
 package cloudclusterscheduler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Queue;
 
 public class ACSScheduler {
 
@@ -41,21 +41,20 @@ public class ACSScheduler {
         Process selected = null;
         boolean fromTier2 = false;
 
-        int selectedEffPri = -1;   // snapshot for Tier-2 running message
+        int selectedEffPri = -1;
 
         if (!tier1.isEmpty()) {
-            selected = tier1.poll();
+            selected = tier1.peek();
         } else if (!tier2.isEmpty()) {
             selected = getHighestPriority(tier2, currentTime);
-            selectedEffPri = getEffectivePriority(selected, currentTime);  // capture BEFORE remove
-            tier2.remove(selected);
-            tier2EntryTime.remove(selected);
+            selectedEffPri = getEffectivePriority(selected, currentTime);  
             fromTier2 = true;
         }
 
         if (selected == null) {
             printDemotionMatrix(currentTime, tier1, tier2, null, quantum, contextSwitch);
             currentTime++;
+            currentProcess = null;  
             continue;
         }
 
@@ -67,7 +66,6 @@ public class ACSScheduler {
                     + " to " + (currentTime + contextSwitch)
                     + ": Context Switch");
 
-            // Emit one matrix line per tick of the switch (nothing is running)
             for (int t = 0; t < contextSwitch; t++) {
                 printDemotionMatrix(currentTime, tier1, tier2, null, quantum, contextSwitch);
                 currentTime++;
@@ -82,6 +80,13 @@ public class ACSScheduler {
                     }
                 }
             }
+        }
+
+        if (fromTier2) {
+            tier2.remove(selected);
+            tier2EntryTime.remove(selected);
+        } else {
+            tier1.remove(selected);
         }
 
         if (selected.startTime == -1) {

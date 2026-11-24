@@ -1,5 +1,7 @@
 package cloudclusterscheduler;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,35 +33,64 @@ public class CloudClusterScheduler {
         return copy;
     }
 
+    private static final boolean VERBOSE_SWEEP = false;
+
+    private static void runConfig(String algo, int test, int q, int cs) {
+        List<Process> ps = (test == 1) ? freshCopy(testCase1()) : freshCopy(testCase2());
+        boolean sjf = algo.equals("SJF");
+        PrintStream console = System.out;
+
+        if (VERBOSE_SWEEP) {
+            System.out.println("\n>>> " + algo + "  TC" + test
+                    + (sjf ? "" : "  Q=" + q) + "  CS=" + cs);
+        } else {
+            System.setOut(new PrintStream(new ByteArrayOutputStream()));
+        }
+        if (sjf) new SJFScheduler().execute(ps, cs);
+        else new ACSScheduler().execute(ps, q, cs);
+        System.setOut(console);
+
+        double wt = 0, tat = 0, rt = 0;
+        for (Process p : ps) {
+            wt += p.waitingTime;
+            tat += p.turnaroundTime;
+            rt += p.responseTime;
+        }
+        int n = ps.size();
+        System.out.printf("%-4s  %-2s %-2d | %7.2f %7.2f %7.2f%n",
+                algo, sjf ? "-" : String.valueOf(q), cs, wt / n, tat / n, rt / n);
+    }
+
     public static void main(String[] args) {
 
         // ===== SJF (Preemptive SRTF) =====
-        System.out.println("========== SJF — TEST CASE 1 (CS=0) ==========");
+        System.out.println("========== SJF - TEST CASE 1 (CS=0) ==========");
         new SJFScheduler().execute(freshCopy(testCase1()), 0);
 
-        System.out.println("\n========== SJF — TEST CASE 2 (CS=1) ==========");
+        System.out.println("\n========== SJF - TEST CASE 2 (CS=1) ==========");
         new SJFScheduler().execute(freshCopy(testCase2()), 1);
 
         // ===== ACS =====
-        System.out.println("\n\n========== ACS — TEST CASE 1: Q=3, CS=0 ==========");
+        System.out.println("\n\n========== ACS - TEST CASE 1: Q=3, CS=0 ==========");
         new ACSScheduler().execute(freshCopy(testCase1()), 3, 0);
 
-        System.out.println("\n========== ACS — TEST CASE 2: Q=3, CS=1 ==========");
+        System.out.println("\n========== ACS - TEST CASE 2: Q=3, CS=1 ==========");
         new ACSScheduler().execute(freshCopy(testCase2()), 3, 1);
 
         // ===== Q / CS sweep for the report =====
-        System.out.println("\n\n########## ACS Q / CS SWEEP ##########");
+        System.out.println("\n\n########## Q / CS SWEEP (summary) ##########");
         int[] qs = {1, 2, 3, 4};
         int[] css = {0, 1, 2};
 
         for (int test = 1; test <= 2; test++) {
             System.out.println("\n----- Test Case " + test + " -----");
+            System.out.println("Algo  Q  CS |  avgWT  avgTAT   avgRT");
+            for (int cs : css) {
+                runConfig("SJF", test, 0, cs);
+            }
             for (int q : qs) {
                 for (int cs : css) {
-                    List<Process> ps = (test == 1) ? freshCopy(testCase1())
-                                                : freshCopy(testCase2());
-                    System.out.println("\n>>> TC" + test + "  Q=" + q + "  CS=" + cs);
-                    new ACSScheduler().execute(ps, q, cs);
+                    runConfig("ACS", test, q, cs);
                 }
             }
         }

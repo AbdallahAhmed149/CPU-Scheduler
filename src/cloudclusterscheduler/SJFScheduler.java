@@ -31,6 +31,7 @@ public class SJFScheduler {
 
             if (shortest == null) {
                 currentTime++;
+                currentProcess = null;   // CPU idle: no context switch needed for the next process
                 continue;
             }
 
@@ -65,12 +66,14 @@ public class SJFScheduler {
     public static void printResults(List<Process> processes) {
         double totalWT = 0;
         double totalTAT = 0;
+        double totalRT = 0;
 
         System.out.println("\nProcess | Arrival | Burst | Finish | Turnaround | Waiting | Response");
         System.out.println("--------------------------------------------------------------------");
         for (Process p : processes) {
             totalWT += p.waitingTime;
             totalTAT += p.turnaroundTime;
+            totalRT += p.responseTime;
             System.out.printf("%-7s | %-7d | %-5d | %-6d | %-10d | %-7d | %-8d\n",
                     p.name, p.arrivalTime, p.burstTime, p.finishTime, p.turnaroundTime, p.waitingTime, p.responseTime);
         }
@@ -78,5 +81,6 @@ public class SJFScheduler {
         System.out.println("--------------------------------------------------------------------");
         System.out.printf("Average Turnaround Time: %.2f\n", (totalTAT / processes.size()));
         System.out.printf("Average Waiting Time: %.2f\n", (totalWT / processes.size()));
+        System.out.printf("Average Response Time: %.2f\n", (totalRT / processes.size()));
     }
 }
